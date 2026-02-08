@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+    <title>Crossword for Ed</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            color: #000;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #8C1515;
+            font-size: 28px;
+            margin: 0 0 10px;
+        }
+
+        .privacy-notice {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        #grid-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .grid {
+            display: grid;
+            gap: 0;
+            background: #000;
+            border: 2px solid #8C1515;
+        }
+
+        .cell {
+            width: 36px;
+            height: 36px;
+            background: #fff;
+            border: 1px solid #ccc;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell.black {
+            background: #000;
+            cursor: default;
+        }
+
+        .cell.selected {
+            background: #E8D3D1;
+        }
+
+        .cell.highlight {
+            background: #F5EDED;
+        }
+
+        .cell-number {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font: 9px Helvetica, Arial, sans-serif;
+            color: #000;
+        }
+
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            font: bold 20px Helvetica, Arial, sans-serif;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            cursor: pointer;
+            caret-color: transparent;
+        }
+
+        .cell.black .cell-input {
+            display: none;
+        }
+
+        #clues-container {
+            max-width: 800px;
+            margin: 40px auto;
+        }
+
+        .clue-section h2 {
+            color: #8C1515;
+            font-size: 18px;
+            margin: 20px 0 10px;
+            border-bottom: 2px solid #8C1515;
+            padding-bottom: 5px;
+        }
+
+        .clue {
+            margin: 5px 0;
+            padding: 4px 6px;
+            cursor: pointer;
+            line-height: 1.6;
+            font-size: 14px;
+            border-radius: 2px;
+        }
+
+        .clue:hover {
+            background: #F5EDED;
+        }
+
+        .clue.active {
+            font-weight: bold;
+            background: #E8D3D1;
+        }
+
+        .clue-num {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        #controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        button {
+            background: #8C1515;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font: 14px Georgia, serif;
+            cursor: pointer;
+            margin: 0 5px;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            background: #6d0f0f;
+        }
+
+        button:focus {
+            outline: 2px solid #8C1515;
+            outline-offset: 2px;
+        }
+
+        /* Storage Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            padding: 30px;
+            max-width: 450px;
+            border: 3px solid #8C1515;
+            text-align: center;
+        }
+
+        .modal h2 {
+            color: #8C1515;
+            margin-bottom: 15px;
+        }
+
+        .modal p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            width: 100%;
+        }
+
+        .direction-indicator {
+            position: fixed;
+            background: #8C1515;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+            pointer-events: none;
+            display: none;
+            z-index: 50;
+        }
+
+        .direction-indicator.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Crossword for Ed</h1>
+            <p class="privacy-notice">Your data never leaves this device.</p>
+        </header>
+
+        <div id="grid-container"></div>
+
+        <div id="clues-container">
+            <section class="clue-section" id="across-clues">
+                <h2>Across</h2>
+            </section>
+            <section class="clue-section" id="down-clues">
+                <h2>Down</h2>
+            </section>
+        </div>
+
+        <div id="controls">
+            <button id="clear-data">Clear All Data</button>
+            <button id="change-storage">Storage Settings</button>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="storage-modal">
+        <div class="modal">
+            <h2>Storage Preference</h2>
+            <p>How would you like to save your progress?</p>
+            <div class="modal-buttons">
+                <button id="storage-session">Session Only (cleared when tab closes)</button>
+                <button id="storage-local">Remember Progress (persists across sessions)</button>
+                <button id="storage-none">No Storage (maximum privacy)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="direction-indicator" id="direction-indicator"></div>
+
+    <script>
+    'use strict';
+
+    // Hardcoded puzzle data
+    const WORDS = [
+        {word: 'AMERICANPIE', clue: 'by Don from a neighboring town', dir: 'across', row: 0, col: 0},
+        {word: 'GOGGLES', clue: 'worn when in chlorine', dir: 'down', row: 0, col: 4},
+        {word: 'TEFILLIN', clue: 'wrapped early', dir: 'across', row: 2, col: 0},
+        {word: 'HIKING', clue: 'requires big heavy boots', dir: 'down', row: 0, col: 8},
+        {word: 'HAWKERS', clue: 'sometimes favorite on Central', dir: 'across', row: 4, col: 2},
+        {word: 'SWIMMING', clue: 'three times a week', dir: 'down', row: 3, col: 0},
+        {word: 'SCOTCH', clue: 'libation from North', dir: 'across', row: 6, col: 4},
+        {word: 'GEFILTE', clue: 'better with horseradish', dir: 'down', row: 4, col: 10},
+        {word: 'SCHUL', clue: 'Saturday AM', dir: 'across', row: 8, col: 0},
+        {word: 'RUGBY', clue: 'striped yellow shirt', dir: 'down', row: 6, col: 6},
+        {word: 'HANDBALL', clue: 'smack walls alternately', dir: 'across', row: 10, col: 3},
+        {word: 'DIETCOKE', clue: 'when adventurous with lime', dir: 'down', row: 8, col: 8},
+        {word: 'BOYSCOUTS', clue: 'cub to eagle', dir: 'across', row: 12, col: 0},
+        {word: 'FISHSPREAD', clue: 'not bread but easy to mistake', dir: 'down', row: 10, col: 5},
+        {word: 'BIOGRAPHY', clue: 'tomes across a wall', dir: 'across', row: 14, col: 2},
+        {word: 'CARLISLE', clue: 'where family began', dir: 'down', row: 12, col: 7},
+        {word: 'KALE', clue: "don't ask don't tell", dir: 'across', row: 16, col: 4},
+        {word: 'PANEER', clue: 'cheese lately', dir: 'across', row: 18, col: 6}
+    ];
+
+    const STORAGE_KEY = 'crossword-ed-progress';
+    const STORAGE_MODE_KEY = 'crossword-ed-storage-mode';
+
+    let grid = [];
+    let gridRows = 0;
+    let gridCols = 0;
+    let selectedCell = null;
+    let currentDirection = 'across';
+    let storageMode = null;
+    let saveTimeout = null;
+    let clueNumbers = {};
+
+    // Initialize
+    function init() {
+        calculateGridSize();
+        buildGrid();
+        assignClueNumbers();
+        renderGrid();
+        renderClues();
+        setupEventListeners();
+        checkStorageMode();
+    }
+
+    function calculateGridSize() {
+        gridRows = 0;
+        gridCols = 0;
+        WORDS.forEach(w => {
+            const endRow = w.dir === 'down' ? w.row + w.word.length : w.row + 1;
+            const endCol = w.dir === 'across' ? w.col + w.word.length : w.col + 1;
+            gridRows = Math.max(gridRows, endRow);
+            gridCols = Math.max(gridCols, endCol);
+        });
+    }
+
+    function buildGrid() {
+        // Initialize all cells as black
+        grid = [];
+        for (let r = 0; r < gridRows; r++) {
+            grid[r] = [];
+            for (let c = 0; c < gridCols; c++) {
+                grid[r][c] = { isBlack: true, letter: '', clueNumber: null, acrossWord: null, downWord: null };
+            }
+        }
+
+        // Mark cells used by words as white and assign word references
+        WORDS.forEach(w => {
+            for (let i = 0; i < w.word.length; i++) {
+                const r = w.dir === 'down' ? w.row + i : w.row;
+                const c = w.dir === 'across' ? w.col + i : w.col;
+                grid[r][c].isBlack = false;
+                if (w.dir === 'across') {
+                    grid[r][c].acrossWord = w;
+                } else {
+                    grid[r][c].downWord = w;
+                }
+            }
+        });
+    }
+
+    function assignClueNumbers() {
+        let num = 1;
+        const wordStarts = {};
+
+        WORDS.forEach(w => {
+            const key = w.row + '-' + w.col;
+            if (!wordStarts[key]) wordStarts[key] = {};
+            wordStarts[key][w.dir] = w;
+        });
+
+        for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+                const key = r + '-' + c;
+                if (wordStarts[key]) {
+                    grid[r][c].clueNumber = num;
+                    if (wordStarts[key].across) clueNumbers[wordStarts[key].across.word] = num;
+                    if (wordStarts[key].down) clueNumbers[wordStarts[key].down.word] = num;
+                    num++;
+                }
+            }
+        }
+    }
+
+    function renderGrid() {
+        const container = document.getElementById('grid-container');
+        const gridEl = document.createElement('div');
+        gridEl.className = 'grid';
+        gridEl.style.gridTemplateColumns = 'repeat(' + gridCols + ', 36px)';
+
+        for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+                const cell = grid[r][c];
+                const cellEl = document.createElement('div');
+                cellEl.className = 'cell' + (cell.isBlack ? ' black' : '');
+                cellEl.dataset.row = r;
+                cellEl.dataset.col = c;
+
+                if (cell.clueNumber) {
+                    const numEl = document.createElement('span');
+                    numEl.className = 'cell-number';
+                    numEl.textContent = cell.clueNumber;
+                    cellEl.appendChild(numEl);
+                }
+
+                if (!cell.isBlack) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'cell-input';
+                    input.maxLength = 1;
+                    input.dataset.row = r;
+                    input.dataset.col = c;
+                    input.value = cell.letter;
+                    cellEl.appendChild(input);
+                }
+
+                gridEl.appendChild(cellEl);
+            }
+        }
+
+        container.innerHTML = '';
+        container.appendChild(gridEl);
+    }
+
+    function renderClues() {
+        const acrossContainer = document.getElementById('across-clues');
+        const downContainer = document.getElementById('down-clues');
+
+        let acrossHTML = '<h2>Across</h2>';
+        let downHTML = '<h2>Down</h2>';
+
+        WORDS.filter(w => w.dir === 'across')
+            .sort((a, b) => clueNumbers[a.word] - clueNumbers[b.word])
+            .forEach(w => {
+                acrossHTML += '<div class="clue" data-word="' + w.word + '" data-dir="across">' +
+                    '<span class="clue-num">' + clueNumbers[w.word] + '.</span>' + w.clue + '</div>';
+            });
+
+        WORDS.filter(w => w.dir === 'down')
+            .sort((a, b) => clueNumbers[a.word] - clueNumbers[b.word])
+            .forEach(w => {
+                downHTML += '<div class="clue" data-word="' + w.word + '" data-dir="down">' +
+                    '<span class="clue-num">' + clueNumbers[w.word] + '.</span>' + w.clue + '</div>';
+            });
+
+        acrossContainer.innerHTML = acrossHTML;
+        downContainer.innerHTML = downHTML;
+    }
+
+    function setupEventListeners() {
+        // Grid click delegation
+        document.getElementById('grid-container').addEventListener('click', function(e) {
+            const input = e.target.closest('.cell-input');
+            const cell = e.target.closest('.cell');
+            if (input) {
+                const r = parseInt(input.dataset.row);
+                const c = parseInt(input.dataset.col);
+                handleCellSelect(r, c);
+            } else if (cell && !cell.classList.contains('black')) {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                handleCellSelect(r, c);
+                const inp = cell.querySelector('.cell-input');
+                if (inp) inp.focus();
+            }
+        });
+
+        // Keyboard input
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Clue clicks
+        document.getElementById('clues-container').addEventListener('click', function(e) {
+            const clue = e.target.closest('.clue');
+            if (clue) {
+                const word = WORDS.find(w => w.word === clue.dataset.word && w.dir === clue.dataset.dir);
+                if (word) {
+                    currentDirection = word.dir;
+                    handleCellSelect(word.row, word.col);
+                    focusCell(word.row, word.col);
+                }
+            }
+        });
+
+        // Control buttons
+        document.getElementById('clear-data').addEventListener('click', clearAllData);
+        document.getElementById('change-storage').addEventListener('click', showStorageModal);
+
+        // Storage modal buttons
+        document.getElementById('storage-session').addEventListener('click', function() { setStorageMode('session'); });
+        document.getElementById('storage-local').addEventListener('click', function() { setStorageMode('local'); });
+        document.getElementById('storage-none').addEventListener('click', function() { setStorageMode(null); });
+    }
+
+    function handleCellSelect(row, col) {
+        if (grid[row][col].isBlack) return;
+
+        // If clicking same cell, toggle direction
+        if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+            if (grid[row][col].acrossWord && grid[row][col].downWord) {
+                currentDirection = currentDirection === 'across' ? 'down' : 'across';
+            }
+        } else {
+            // Prefer direction based on available words
+            if (grid[row][col].acrossWord && !grid[row][col].downWord) {
+                currentDirection = 'across';
+            } else if (!grid[row][col].acrossWord && grid[row][col].downWord) {
+                currentDirection = 'down';
+            }
+        }
+
+        selectedCell = { row, col };
+        updateHighlights();
+        updateDirectionIndicator(row, col);
+    }
+
+    function updateHighlights() {
+        // Clear all highlights
+        document.querySelectorAll('.cell').forEach(c => {
+            c.classList.remove('selected', 'highlight');
+        });
+        document.querySelectorAll('.clue').forEach(c => {
+            c.classList.remove('active');
+        });
+
+        if (!selectedCell) return;
+
+        const { row, col } = selectedCell;
+        const word = currentDirection === 'across' ? grid[row][col].acrossWord : grid[row][col].downWord;
+
+        if (word) {
+            // Highlight word cells
+            for (let i = 0; i < word.word.length; i++) {
+                const r = word.dir === 'down' ? word.row + i : word.row;
+                const c = word.dir === 'across' ? word.col + i : word.col;
+                const cellEl = document.querySelector('.cell[data-row="' + r + '"][data-col="' + c + '"]');
+                if (cellEl) cellEl.classList.add('highlight');
+            }
+
+            // Highlight clue
+            const clueEl = document.querySelector('.clue[data-word="' + word.word + '"][data-dir="' + word.dir + '"]');
+            if (clueEl) clueEl.classList.add('active');
+        }
+
+        // Highlight selected cell
+        const selectedEl = document.querySelector('.cell[data-row="' + row + '"][data-col="' + col + '"]');
+        if (selectedEl) selectedEl.classList.add('selected');
+    }
+
+    function updateDirectionIndicator(row, col) {
+        const indicator = document.getElementById('direction-indicator');
+        const cellEl = document.querySelector('.cell[data-row="' + row + '"][data-col="' + col + '"]');
+        if (cellEl) {
+            const rect = cellEl.getBoundingClientRect();
+            indicator.style.left = (rect.right + 5) + 'px';
+            indicator.style.top = rect.top + 'px';
+            indicator.textContent = currentDirection.toUpperCase();
+            indicator.classList.add('visible');
+        }
+    }
+
+    function handleKeyDown(e) {
+        if (!selectedCell) return;
+
+        const { row, col } = selectedCell;
+        const key = e.key;
+
+        // Letter input
+        if (/^[a-zA-Z]$/.test(key)) {
+            e.preventDefault();
+            grid[row][col].letter = key.toUpperCase();
+            updateCellDisplay(row, col);
+            moveToNextCell();
+            scheduleSave();
+            return;
+        }
+
+        // Backspace/Delete
+        if (key === 'Backspace' || key === 'Delete') {
+            e.preventDefault();
+            if (grid[row][col].letter) {
+                grid[row][col].letter = '';
+                updateCellDisplay(row, col);
+            } else {
+                moveToPrevCell();
+            }
+            scheduleSave();
+            return;
+        }
+
+        // Arrow keys
+        if (key === 'ArrowUp') { e.preventDefault(); moveCell(-1, 0); }
+        if (key === 'ArrowDown') { e.preventDefault(); moveCell(1, 0); }
+        if (key === 'ArrowLeft') { e.preventDefault(); moveCell(0, -1); }
+        if (key === 'ArrowRight') { e.preventDefault(); moveCell(0, 1); }
+
+        // Space/Enter to toggle direction
+        if (key === ' ' || key === 'Enter') {
+            e.preventDefault();
+            if (grid[row][col].acrossWord && grid[row][col].downWord) {
+                currentDirection = currentDirection === 'across' ? 'down' : 'across';
+                updateHighlights();
+                updateDirectionIndicator(row, col);
+            }
+        }
+
+        // Tab to next word
+        if (key === 'Tab') {
+            e.preventDefault();
+            moveToNextWord(e.shiftKey);
+        }
+    }
+
+    function updateCellDisplay(row, col) {
+        const input = document.querySelector('.cell-input[data-row="' + row + '"][data-col="' + col + '"]');
+        if (input) input.value = grid[row][col].letter;
+    }
+
+    function moveToNextCell() {
+        if (!selectedCell) return;
+        let { row, col } = selectedCell;
+
+        if (currentDirection === 'across') {
+            col++;
+            if (col >= gridCols || grid[row][col].isBlack) return;
+        } else {
+            row++;
+            if (row >= gridRows || grid[row][col].isBlack) return;
+        }
+
+        handleCellSelect(row, col);
+        focusCell(row, col);
+    }
+
+    function moveToPrevCell() {
+        if (!selectedCell) return;
+        let { row, col } = selectedCell;
+
+        if (currentDirection === 'across') {
+            col--;
+            if (col < 0 || grid[row][col].isBlack) return;
+        } else {
+            row--;
+            if (row < 0 || grid[row][col].isBlack) return;
+        }
+
+        handleCellSelect(row, col);
+        focusCell(row, col);
+    }
+
+    function moveCell(dr, dc) {
+        if (!selectedCell) return;
+        let { row, col } = selectedCell;
+        let newRow = row + dr;
+        let newCol = col + dc;
+
+        while (newRow >= 0 && newRow < gridRows && newCol >= 0 && newCol < gridCols) {
+            if (!grid[newRow][newCol].isBlack) {
+                handleCellSelect(newRow, newCol);
+                focusCell(newRow, newCol);
+                return;
+            }
+            newRow += dr;
+            newCol += dc;
+        }
+    }
+
+    function moveToNextWord(reverse) {
+        const sortedWords = WORDS.slice().sort((a, b) => {
+            const numA = clueNumbers[a.word];
+            const numB = clueNumbers[b.word];
+            return numA - numB;
+        });
+
+        if (reverse) sortedWords.reverse();
+
+        let currentWord = null;
+        if (selectedCell) {
+            currentWord = currentDirection === 'across'
+                ? grid[selectedCell.row][selectedCell.col].acrossWord
+                : grid[selectedCell.row][selectedCell.col].downWord;
+        }
+
+        let foundCurrent = !currentWord;
+        for (const word of sortedWords) {
+            if (foundCurrent) {
+                currentDirection = word.dir;
+                handleCellSelect(word.row, word.col);
+                focusCell(word.row, word.col);
+                return;
+            }
+            if (currentWord && word.word === currentWord.word && word.dir === currentWord.dir) {
+                foundCurrent = true;
+            }
+        }
+
+        // Wrap around
+        if (sortedWords.length > 0) {
+            const word = sortedWords[0];
+            currentDirection = word.dir;
+            handleCellSelect(word.row, word.col);
+            focusCell(word.row, word.col);
+        }
+    }
+
+    function focusCell(row, col) {
+        const input = document.querySelector('.cell-input[data-row="' + row + '"][data-col="' + col + '"]');
+        if (input) input.focus();
+    }
+
+    // Storage functions
+    function checkStorageMode() {
+        try {
+            const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
+            if (savedMode === 'session' || savedMode === 'local') {
+                storageMode = savedMode;
+                loadProgress();
+            } else if (savedMode === 'none') {
+                storageMode = null;
+            } else {
+                showStorageModal();
+            }
+        } catch (e) {
+            showStorageModal();
+        }
+    }
+
+    function showStorageModal() {
+        document.getElementById('storage-modal').classList.add('visible');
+    }
+
+    function hideStorageModal() {
+        document.getElementById('storage-modal').classList.remove('visible');
+    }
+
+    function setStorageMode(mode) {
+        storageMode = mode;
+        try {
+            if (mode) {
+                localStorage.setItem(STORAGE_MODE_KEY, mode);
+            } else {
+                localStorage.setItem(STORAGE_MODE_KEY, 'none');
+            }
+        } catch (e) {}
+        hideStorageModal();
+        if (mode) loadProgress();
+    }
+
+    function scheduleSave() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveProgress, 500);
+    }
+
+    function saveProgress() {
+        if (!storageMode) return;
+
+        const data = { cells: {} };
+        for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+                if (grid[r][c].letter) {
+                    data.cells[r + '-' + c] = grid[r][c].letter;
+                }
+            }
+        }
+
+        try {
+            const storage = storageMode === 'session' ? sessionStorage : localStorage;
+            storage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {}
+    }
+
+    function loadProgress() {
+        if (!storageMode) return;
+
+        try {
+            const storage = storageMode === 'session' ? sessionStorage : localStorage;
+            const raw = storage.getItem(STORAGE_KEY);
+            if (!raw) return;
+
+            const data = JSON.parse(raw);
+            if (!validateStorageData(data)) {
+                clearAllData();
+                return;
+            }
+
+            for (const key in data.cells) {
+                const [r, c] = key.split('-').map(Number);
+                if (grid[r] && grid[r][c] && !grid[r][c].isBlack) {
+                    grid[r][c].letter = data.cells[key];
+                    updateCellDisplay(r, c);
+                }
+            }
+        } catch (e) {
+            clearAllData();
+        }
+    }
+
+    function validateStorageData(data) {
+        if (!data || typeof data !== 'object') return false;
+        if (!data.cells || typeof data.cells !== 'object') return false;
+
+        for (const key in data.cells) {
+            if (!/^\d+-\d+$/.test(key)) return false;
+            if (!/^[A-Z]$/.test(data.cells[key])) return false;
+        }
+        return true;
+    }
+
+    function clearAllData() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            sessionStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+
+        for (let r = 0; r < gridRows; r++) {
+            for (let c = 0; c < gridCols; c++) {
+                grid[r][c].letter = '';
+                updateCellDisplay(r, c);
+            }
+        }
+    }
+
+    // Start
+    init();
+    </script>
+</body>
+</html>
