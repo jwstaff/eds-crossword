@@ -264,27 +264,11 @@
     <script>
     'use strict';
 
-    // Hardcoded puzzle data
-    const WORDS = [
-        {word: 'AMERICANPIE', clue: 'by Don from a neighboring town', dir: 'across', row: 0, col: 0},
-        {word: 'GOGGLES', clue: 'worn when in chlorine', dir: 'down', row: 0, col: 4},
-        {word: 'TEFILLIN', clue: 'wrapped early', dir: 'across', row: 2, col: 0},
-        {word: 'HIKING', clue: 'requires big heavy boots', dir: 'down', row: 0, col: 8},
-        {word: 'HAWKERS', clue: 'sometimes favorite on Central', dir: 'across', row: 4, col: 2},
-        {word: 'SWIMMING', clue: 'three times a week', dir: 'down', row: 3, col: 0},
-        {word: 'SCOTCH', clue: 'libation from North', dir: 'across', row: 6, col: 4},
-        {word: 'GEFILTE', clue: 'better with horseradish', dir: 'down', row: 4, col: 10},
-        {word: 'SCHUL', clue: 'Saturday AM', dir: 'across', row: 8, col: 0},
-        {word: 'RUGBY', clue: 'striped yellow shirt', dir: 'down', row: 6, col: 6},
-        {word: 'HANDBALL', clue: 'smack walls alternately', dir: 'across', row: 10, col: 3},
-        {word: 'DIETCOKE', clue: 'when adventurous with lime', dir: 'down', row: 8, col: 8},
-        {word: 'BOYSCOUTS', clue: 'cub to eagle', dir: 'across', row: 12, col: 0},
-        {word: 'FISHSPREAD', clue: 'not bread but easy to mistake', dir: 'down', row: 10, col: 5},
-        {word: 'BIOGRAPHY', clue: 'tomes across a wall', dir: 'across', row: 14, col: 2},
-        {word: 'CARLISLE', clue: 'where family began', dir: 'down', row: 12, col: 7},
-        {word: 'KALE', clue: "don't ask don't tell", dir: 'across', row: 16, col: 4},
-        {word: 'PANEER', clue: 'cheese lately', dir: 'across', row: 18, col: 6}
-    ];
+    // TODO: Add your own crossword words here
+    // Each word needs: word (uppercase), clue, dir ('across' or 'down'), row, col
+    // Example:
+    // {word: 'EXAMPLE', clue: 'A sample entry', dir: 'across', row: 0, col: 0}
+    const WORDS = [];
 
     const STORAGE_KEY = 'crossword-ed-progress';
     const STORAGE_MODE_KEY = 'crossword-ed-storage-mode';
